@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore 2025 Brooklyn B4 Local bus speeds by segment, hour and month.">
+  <title>NYC Bus Speed Explorer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="workspace">
+    <header class="masthead">
+      <div>
+        <h1>NYC Bus Speed Explorer</h1>
+        <p>Brooklyn · 2025 Local service</p>
+      </div>
+    </header>
+
+    <section class="controls" aria-label="Dashboard filters">
+      <div class="control">
+        <span class="control-label" id="direction-label">Direction</span>
+        <div class="toggle" role="group" aria-labelledby="direction-label">
+          <button id="east" type="button" aria-pressed="true">Eastbound</button>
+          <button id="west" type="button" aria-pressed="false">Westbound</button>
+        </div>
+      </div>
+      <div class="control">
+        <label class="control-label" for="day">Day of week</label>
+        <select id="day">
+          <option value="all">All days</option>
+          <option value="0">Monday</option>
+          <option value="1">Tuesday</option>
+          <option value="2">Wednesday</option>
+          <option value="3">Thursday</option>
+          <option value="4">Friday</option>
+          <option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+      </div>
+      <button class="reset" id="reset" type="button">Reset filters</button>
+    </section>
+
+    <div class="context">
+      <span id="context">Loading B4 observations…</span>
+      <div id="chips" aria-label="Active selections"></div>
+    </div>
+
+    <p id="error" hidden role="alert"></p>
+    <div id="dashboard" aria-busy="true">
+      <section class="panel bars-panel" aria-labelledby="bars-title">
+        <header class="panel-heading">
+          <div>
+            <h2 id="bars-title">Road speed by segment</h2>
+            <p class="subtitle" id="bar-subtitle"></p>
+          </div>
+          <button id="export" class="secondary" type="button" title="Download the speed and trip totals shown in the bar chart">Export CSV</button>
+        </header>
+        <p class="finding" id="bar-finding"></p>
+        <div class="chart-scroll"><div id="bars" class="chart"></div></div>
+        <div class="chart-footer">
+          <span>Select a segment to highlight it across all views.</span>
+          <span class="dot-key"><i aria-hidden="true"></i> Dot area = observed trips <span id="dot-scale"></span></span>
+        </div>
+      </section>
+
+      <div class="bottom-grid">
+        <section class="panel heat-panel" aria-labelledby="heat-title">
+          <header class="panel-heading">
+            <div>
+              <h2 id="heat-title">Hourly speed vs. usual</h2>
+              <p class="subtitle" id="heat-subtitle"></p>
+            </div>
+          </header>
+          <p class="finding" id="heat-finding"></p>
+          <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
+          <div class="heat-legend">
+            <div class="heat-scale">
+              <div class="ramp" aria-hidden="true"></div>
+              <div class="scale-labels"><span>−50% · slower</span><span>0%</span><span>+50% · faster</span></div>
+            </div>
+            <span class="gap-key"><i class="gap-sample" aria-hidden="true"></i> No observations</span>
+          </div>
+          <p class="chart-note">Shades cap at ±50%. Hover or focus a cell for its exact difference.</p>
+          <div class="hour-panel">
+            <p class="chart-note">Drag across hours to filter the bars and monthly lines, or use the controls below.</p>
+            <div class="hour-controls" role="group" aria-label="Select hour range">
+              <label>From <select id="hour-start" aria-label="First hour to include"></select></label>
+              <label>Through <select id="hour-end" aria-label="Last hour to include"></select></label>
+              <button id="apply-hours" type="button">Apply hours</button>
+              <button id="clear-hours" type="button">All hours</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel month-panel" aria-labelledby="month-title">
+          <header class="panel-heading">
+            <div>
+              <h2 id="month-title">Monthly road speed</h2>
+              <p class="subtitle">Full year shown for comparison</p>
+            </div>
+          </header>
+          <p class="finding" id="month-finding"></p>
+          <div class="chart-scroll"><div id="monthly" class="chart"></div></div>
+          <p class="chart-note month-note">Select a month to filter the bars and heatmap. Select a line to highlight its segment.</p>
+          <div class="selected-detail" id="selection-detail" hidden></div>
+        </section>
+      </div>
+    </div>
+
+    <footer>Source: <a href="https://data.ny.gov/Transportation/MTA-Bus-Route-Segment-Speeds-Beginning-2025/kufs-yh3x" target="_blank" rel="noopener">MTA Bus Route Segment Speeds</a></footer>
+  </main>
+  <div id="tooltip" role="tooltip" hidden></div>
+  <div id="announcement" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
