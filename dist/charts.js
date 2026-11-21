@@ -150,14 +150,14 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
         .attr('x', d => x(d.h)).attr('y', y(segment.id)).attr('width', x.bandwidth()).attr('height', y.bandwidth()).attr('rx', 2)
         .attr('fill', d => d.delta === null ? 'url(#heat-no-observations)' : lightness(d.delta))
         .attr('stroke', d => d.delta === null ? '#bdc6c6' : 'none')
-        .attr('opacity', 1);
+        .attr('opacity', d => state.selected != null && segment.id !== state.selected && d.delta !== null ? 0.7 : 1);
       row.selectAll('text.delta-symbol').remove();
       row.selectAll('text.delta-value')
         .data(showValues ? segment.hourly.map((v,h)=>({...v,h})).filter(d=>Number.isFinite(d.delta)) : [], d=>d.h)
         .join('text').attr('class','delta-value').attr('x',d=>x(d.h)+x.bandwidth()/2)
         .attr('y',y(segment.id)+y.bandwidth()/2).attr('dy','0.35em')
         .attr('text-anchor','middle').attr('font-size',7).attr('font-weight',500)
-        .attr('fill',d=>heatTextColor(d.delta)).attr('pointer-events','none')
+        .attr('fill',d=>state.selected != null && segment.id !== state.selected ? '#192c32' : heatTextColor(d.delta)).attr('pointer-events','none')
         .attr('aria-hidden','true')
         .text(d=>d.delta === 0 ? '0%' : Math.abs(d.delta) < 1
           ? (d.delta < 0 ? '−<1%' : '+<1%')
@@ -237,15 +237,23 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
       const g = d3.select(this), selected = segment.id === state.selected;
       const values = segment.monthly.map((value, m) => ({...value, m}));
       const path = line(values);
+      g.selectAll('path.month-halo').data(selected ? [path] : []).join('path')
+        .attr('class', 'month-halo').attr('d', d => d).attr('fill', 'none')
+        .attr('stroke', '#ffffff').attr('stroke-width', 6.5)
+        .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+        .attr('pointer-events', 'none').lower();
       g.selectAll('path.month-line').data([path]).join('path').attr('class', 'month-line')
-        .attr('d', d => d).attr('fill', 'none').attr('stroke', selected ? palette.ink : palette.otherLine)
-        .attr('stroke-width', selected ? 3 : 1.5).attr('stroke-linejoin', 'round')
-        .attr('opacity', state.selected && !selected ? 0.55 : 0.95);
+        .attr('d', d => d).attr('fill', 'none').attr('stroke', selected ? palette.accent : palette.otherLine)
+        .attr('stroke-width', selected ? 3.2 : 1.3).attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('opacity', state.selected != null && !selected ? 0.35 : 0.95);
       g.selectAll('path.line-hit').data([path]).join('path').attr('class', 'line-hit')
         .attr('d', d => d).attr('fill', 'none').attr('stroke', 'transparent').attr('stroke-width', 12);
       g.selectAll('circle.month-point').data(values.filter(v => v.speed !== null), d => d.m).join('circle')
         .attr('class', 'month-point').attr('cx', d => x(d.m)).attr('cy', d => y(d.speed))
-        .attr('r', selected ? 3.7 : 2.5).attr('fill', selected ? palette.accent : palette.otherLine)
+        .attr('r', selected ? 4.2 : 2.5).attr('fill', selected ? palette.accent : palette.otherLine)
+        .attr('stroke', selected ? '#ffffff' : 'none').attr('stroke-width', selected ? 1.5 : 0)
+        .attr('opacity', state.selected != null && !selected ? 0.4 : 1)
         .on('pointermove.tooltip', (event, value) => {
           event.stopPropagation();
           tooltip(event, `${segmentName(segment)}\n${MONTHS[value.m]} · ${fmt(value.speed)} mph\n${count(value.trips)} observed trips`);
