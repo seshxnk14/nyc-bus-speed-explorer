@@ -147,6 +147,101 @@ def prepare(source, *, route, year, service='Local', quarantine=None):
 
 
 
+def consolidate_segments(payload):
+    import copy
+    result = copy.deepcopy(payload)
+    groups, mapping = {}, {}
+    for s in payload['segments']:
+        pair = s.get('endpointPair')
+        if not pair:
+            raise ValueError('Endpoint metadata missing; use v5 prepared files.')
+        groups.setdefault(pair, []).append(s)
+        mapping[s['id']] = pair
+    by_pair = {pair: [] for pair in groups}
+    for row in result['rows']:
+        row[0] = mapping[row[0]]
+        by_pair[row[0]].append(row)
+    segments, merges = [], []
+    for pair, variants in groups.items():
+        if len({v['direction'] for v in variants}) != 1:
+            raise ValueError('Direction conflict for endpoint pair')
+        s = copy.deepcopy(min(variants, key=lambda v: (v['order'], v['id'])))
+        orders = sorted({o for v in variants for o in v.get('sourceStopOrders', [v['order']])})
+        rows = by_pair[pair]
+        s.update(id=pair, order=min(orders), sourceStopOrders=orders)
+        s.pop('sourceStopOrder', None)
+        s['sourceVariants'] = copy.deepcopy(variants)
+        s['distanceMin'] = min(v.get('distanceMin', v['distance']) for v in variants)
+        s['distanceMax'] = max(v.get('distanceMax', v['distance']) for v in variants)
+        s['distance'] = (s['distanceMin'] if s['distanceMin'] == s['distanceMax'] else
+                         math.fsum(r[5] for r in rows) / sum(r[4] for r in rows))
+        s.pop('distanceVariants', None)
+        s['monthsAvailable'] = sorted({r[1] for r in rows})
+        segments.append(s)
+        if len(variants) > 1:
+            merges.append({'segment': pair, 'sourceIds': [v['id'] for v in variants],
+                           'sourceStopOrders': orders, 'months': s['monthsAvailable'], 'sourceRecords': len(rows)})
+    result['segments'] = sorted(segments, key=lambda s: (s['direction'], s['order'], s['id']))
+    result['meta'].update(identityVersion=2,
+        segmentIdentity='route + direction + endpoint stop IDs; stop order is display metadata',
+        orderingNote='Sorted by minimum observed source stop order; source variants retained. Not a single historical route snapshot.',
+        mergedEndpointPairs=len(merges),
+        segmentsWithVaryingDistance=sum(s['distanceMin'] != s['distanceMax'] for s in segments))
+    if len(result['rows']) != len(payload['rows']) or any(a[1:] != b[1:] for a,b in zip(result['rows'],payload['rows'])):
+        raise ValueError('Observation conservation check failed')
+    return result, merges
+
+
+def repair_prepared(source, output):
+    import shutil
+    import tempfile
+    source, output = Path(source), Path(output)
+    if output.exists():
+        raise ValueError('Output already exists; choose a new --output folder.')
+    catalog = json.loads((source / 'catalog.json').read_text())
+    report = json.loads((source / 'preparation-report.json').read_text())
+    if report.get('failedRoutes'):
+        raise ValueError('Use completed v5 data with zero failed routes.')
+    if report.get('quarantinedRows', 0) and not (source / 'quarantined-rows.csv').exists():
+        raise ValueError('Source quarantine log missing.')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='repair-', dir=output.parent) as tmp:
+        stage = Path(tmp) / 'result'
+        (stage / 'routes').mkdir(parents=True)
+        entries, changes = [], []
+        for i, entry in enumerate(catalog['routes'], 1):
+            relative = Path(entry['file'])
+            if relative.is_absolute() or '..' in relative.parts or relative.parts[0] != 'routes':
+                raise ValueError('Invalid catalog path')
+            data = json.loads((source / relative).read_text())
+            if data['meta']['route'] != entry['route'] or len(data['rows']) != entry['rows']:
+                raise ValueError('Route file does not match catalog')
+            fixed, merges = (data, []) if data['meta'].get('identityVersion') == 2 else consolidate_segments(data)
+            target = stage / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(fixed, separators=(',', ':'), allow_nan=False))
+            entries.append({**entry, 'segments': len(fixed['segments']),
+                'segmentsWithVaryingDistance': fixed['meta']['segmentsWithVaryingDistance'],
+                'mergedEndpointPairs': fixed['meta']['mergedEndpointPairs']})
+            if merges:
+                changes.append({'route': entry['route'], 'before': len(data['segments']), 'after': len(fixed['segments']), 'merges': merges})
+            print(f"{i}/{len(catalog['routes'])}: {entry['route']} — {len(data['segments'])} to {len(fixed['segments'])} segments", flush=True)
+        if sum(e['rows'] for e in entries) != report['preparedRows']:
+            raise ValueError('Record totals do not match source report')
+        catalog.update(routes=entries, identityVersion=2)
+        report.update(routes=entries, identityVersion=2)
+        audit = {'routesChanged': len(changes), 'preparedRowsPreserved': report['preparedRows'],
+                 'numericValuesPreserved': True, 'changes': changes}
+        for name, value in [('catalog.json',catalog),('preparation-report.json',report),('segment-identity-report.json',audit)]:
+            (stage / name).write_text(json.dumps(value, indent=2, allow_nan=False))
+        if (source / 'quarantined-rows.csv').exists():
+            shutil.copy2(source / 'quarantined-rows.csv',stage)
+        stage.rename(output)
+    print(f"Complete: {len(entries)} routes; {report['preparedRows']:,} records preserved; {len(changes)} routes regrouped.")
+    print(f'Output: {output}')
+    return 0
+
+
 def main():
     import sqlite3
     import tempfile
@@ -155,7 +250,10 @@ def main():
     parser.add_argument('source', type=Path)
     parser.add_argument('--output', type=Path, default=Path('dist/nyc-data'))
     parser.add_argument('--year', type=int, default=2025)
+    parser.add_argument('--from-prepared', action='store_true', help='Repair a completed prepared folder instead of reading CSV')
     args = parser.parse_args()
+    if args.from_prepared:
+        return repair_prepared(args.source, args.output)
     if args.output.exists():
         parser.error('Output already exists. Choose a new --output folder; existing files will not be overwritten.')
     args.output.mkdir(parents=True)
@@ -229,6 +327,7 @@ def main():
                             report['quarantinedRows'] += 1
                             report['quarantineReasons'][reason] = report['quarantineReasons'].get(reason, 0) + 1
                         payload = prepare(staging, route=route, year=args.year, quarantine=quarantine)
+                        payload, identity_changes = consolidate_segments(payload)
                     except ValueError as error:
                         report['failedRoutes'].append({'route': route, 'reason': str(error),
                             'note': 'Line numbers refer to the route-only extract. No file published for this route.'})
