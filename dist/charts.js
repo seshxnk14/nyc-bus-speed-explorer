@@ -1,3 +1,4 @@
+import {heatColor, heatTextColor} from './heat-colors.js';
 
 import {MONTHS} from './model.js';
 
@@ -108,13 +109,29 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
   }
 
   function heatmap(host, view, state) {
+    const toggle = document.getElementById('heat-show-values');
+    const showValues = toggle?.getAttribute('aria-pressed') === 'true';
+    d3.select(toggle).text(showValues ? 'Click to hide values' : 'Click to show values')
+      .on('click.heatValues', () => {
+        toggle.setAttribute('aria-pressed', String(!showValues));
+        heatmap(host, view, state);
+      });
+    d3.select(host).classed('show-heat-values', showValues);
     const width = 640, left = 38, top = 15, right = 7, rowHeight = 34;
     const bottom = top + view.length * rowHeight;
     const svg = chart(host, width, bottom + 52, '24 hourly columns for each segment; drag to select hours');
     const x = d3.scaleBand().domain(d3.range(24)).range([left, width - right]).paddingInner(0.08);
     const y = d3.scaleBand().domain(view.map(d => d.id)).range([top, bottom]).paddingInner(0.09);
-    // One fixed lightness scale for every segment. White is reserved for missing data.
-    const lightness = d3.scaleLinear().domain([-50, 50]).range(['#25353c', '#e3e9ec']).clamp(true);
+    const defs = svg.selectAll('defs.heat-defs').data([null]).join('defs').attr('class', 'heat-defs');
+    const pattern = defs.selectAll('pattern').data([null]).join('pattern')
+      .attr('id', 'heat-no-observations').attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 6).attr('height', 6);
+    pattern.selectAll('rect').data([null]).join('rect')
+      .attr('width', 6).attr('height', 6).attr('fill', '#ffffff');
+    pattern.selectAll('path').data([null]).join('path')
+      .attr('d', 'M-1,1 L1,-1 M0,6 L6,0 M5,7 L7,5')
+      .attr('stroke', '#8a999d').attr('stroke-width', 0.8);
+    const lightness = heatColor;
     const rows = svg.selectAll('g.heat-row').data(view, d => d.id).join('g').attr('class', 'heat-row')
       .attr('data-segment', d => d.id).attr('aria-pressed', d => String(d.id === state.selected))
       .attr('opacity', 1);
@@ -131,11 +148,22 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
       const cells = row.selectAll('rect.hour-cell').data(segment.hourly.map((value, h) => ({...value, h, segment})), d => d.h)
         .join('rect').attr('class', 'hour-cell').attr('data-hour', d => d.h)
         .attr('x', d => x(d.h)).attr('y', y(segment.id)).attr('width', x.bandwidth()).attr('height', y.bandwidth()).attr('rx', 2)
-        .attr('fill', d => d.delta === null ? '#fff' : lightness(d.delta))
+        .attr('fill', d => d.delta === null ? 'url(#heat-no-observations)' : lightness(d.delta))
         .attr('stroke', d => d.delta === null ? '#bdc6c6' : 'none')
         .attr('opacity', 1);
+      row.selectAll('text.delta-symbol').remove();
+      row.selectAll('text.delta-value')
+        .data(showValues ? segment.hourly.map((v,h)=>({...v,h})).filter(d=>Number.isFinite(d.delta)) : [], d=>d.h)
+        .join('text').attr('class','delta-value').attr('x',d=>x(d.h)+x.bandwidth()/2)
+        .attr('y',y(segment.id)+y.bandwidth()/2).attr('dy','0.35em')
+        .attr('text-anchor','middle').attr('font-size',7).attr('font-weight',500)
+        .attr('fill',d=>heatTextColor(d.delta)).attr('pointer-events','none')
+        .attr('aria-hidden','true')
+        .text(d=>d.delta === 0 ? '0%' : Math.abs(d.delta) < 1
+          ? (d.delta < 0 ? '−<1%' : '+<1%')
+          : (d.delta < 0 ? '−' : '+') + Math.round(Math.abs(d.delta)) + '%');
       // Keyboard users can select a single hour from a cell; controls support ranges.
-      interactive(cells, d => `${segmentName(segment)}, ${hour(d.h)}: ${d.speed === null ? 'no observations' : fmt(d.speed) + ' mph'}`,
+      interactive(cells, d => `${segmentName(segment)}, ${hour(d.h)}: ${d.speed === null ? 'no observations' : fmt(d.speed) + ' mph, ' + fmt(d.delta) + '% versus baseline'}`,
         d => onHours([d.h, d.h]), d => cellTooltip(d, state));
       row.selectAll('rect.selection-outline').data(segment.id === state.selected ? [segment] : []).join('rect')
         .attr('class', 'selection-outline').attr('x', left - 3).attr('y', y(segment.id) - 2)

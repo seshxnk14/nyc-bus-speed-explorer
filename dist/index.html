@@ -70,15 +70,16 @@
             </div>
           </header>
           <p class="finding" id="heat-finding"></p>
+          <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap" aria-describedby="heat-reading-note">Click to show values</button>
           <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
           <div class="heat-legend">
             <div class="heat-scale">
               <div class="ramp" aria-hidden="true"></div>
-              <div class="scale-labels"><span>−50% · slower</span><span>0%</span><span>+50% · faster</span></div>
+              <div class="scale-labels"><span>−50% · slower</span><span>0% · usual</span><span>+50% · faster</span></div>
             </div>
             <span class="gap-key"><i class="gap-sample" aria-hidden="true"></i> No observations</span>
           </div>
-          <p class="chart-note">Shades cap at ±50%. Hover or focus a cell for its exact difference.</p>
+          <p class="chart-note" id="heat-reading-note">Orange: slower. Blue: faster. Neutral: usual speed. Hatching: no observations. Colors cap at ±50%. Show values for signed percentages, rounded to whole numbers; values below 1% retain their sign. Hover or focus for precise values.</p>
           <div class="hour-panel">
             <p class="chart-note">Drag across hours to filter the bars and monthly lines, or use the controls below.</p>
             <div class="hour-controls" role="group" aria-label="Select hour range">
