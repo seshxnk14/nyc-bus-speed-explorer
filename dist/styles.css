@@ -95,3 +95,36 @@ svg text { user-select: none; }
   .controls > .control:first-child { flex-basis: 100%; }
   .toggle { width: fit-content; }
 }
+
+
+/* Keep long route lists usable without shrinking chart labels. */
+.controls { flex-wrap: wrap; }
+#borough { min-width: 150px; }
+#route { min-width: 100px; }
+#direction { min-width: 150px; }
+.chart-scroll { max-height: 620px; overflow: auto; }
+#route-note { margin: 8px 0 16px; }
+#retry-route { margin: 8px 0; }
+[hidden] { display: none !important; }
+
+.month-title-row { display: flex; align-items: center; gap: .65rem; }
+.info-button { flex: 0 0 auto; width: 36px; height: 36px; padding: 0; border: 1px solid #52656b; border-radius: 50%; background: #fff; color: #192c32; font-size: 18px; font-weight: 700; cursor: pointer; }
+.info-button[aria-expanded="true"] { background: #192c32; color: white; }
+.info-button:focus-visible, #segment-picker:focus-visible { outline: 3px solid #2467a4; outline-offset: 3px; }
+.month-gap-note { max-width: 48ch; line-height: 1.5; color: #34484e; }
+.month-help { margin: 0 20px 16px; padding: 16px; border: 1px solid #89999e; border-radius: 8px; background: #fff; color: #192c32; font-size: 14px; line-height: 1.55; }
+.month-help p { margin: .6rem 0 0; }
+.coverage-panel { margin: 12px 20px 16px; padding: 14px; background: #fff; border: 1px solid #bac5c8; border-radius: 8px; color: #192c32; font-size: 14px; line-height: 1.5; }
+.coverage-panel p { margin: .5rem 0; }
+#month-coverage { font-weight: 650; margin-top: 0; }
+#coverage-segment { overflow-wrap: anywhere; }
+.month-availability { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; margin: 16px 0 10px; padding: 0; list-style: none; }
+.availability-month { display: flex; align-items: center; flex-direction: column; gap: 5px; font-size: 12px; }
+.availability-mark { display: inline-block; flex-shrink: 0; width: 18px; height: 18px; border: 1.5px solid #34484e; border-radius: 2px; box-sizing: border-box; position: relative; background: white; }
+.availability-mark.observed { background: #253d46; }
+.availability-mark.absent { background: repeating-linear-gradient(135deg, #fff 0, #fff 3px, #64767d 3px, #64767d 4px); }
+.availability-mark.filtered::after { content: ''; position: absolute; width: 19px; height: 2px; background: #253d46; top: 7px; left: -2px; transform: rotate(-45deg); }
+.availability-legend { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0; font-size: 13px; }
+.availability-legend li { display: flex; align-items: center; gap: 6px; }
+.coverage-caution { font-size: 13px; color: #40565e; }
+@media (max-width: 420px) { .month-availability { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 12px; } }

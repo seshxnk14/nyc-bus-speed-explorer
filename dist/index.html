@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explore 2025 Brooklyn B4 Local bus speeds by segment, hour and month.">
+  <meta name="description" content="Explore 2025 NYC Local bus speeds by segment, hour and month.">
   <title>NYC Bus Speed Explorer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,18 +12,14 @@
     <header class="masthead">
       <div>
         <h1>NYC Bus Speed Explorer</h1>
-        <p>Brooklyn · 2025 Local service</p>
+        <p>Five boroughs · 2025 Local service</p>
       </div>
     </header>
 
     <section class="controls" aria-label="Dashboard filters">
-      <div class="control">
-        <span class="control-label" id="direction-label">Direction</span>
-        <div class="toggle" role="group" aria-labelledby="direction-label">
-          <button id="east" type="button" aria-pressed="true">Eastbound</button>
-          <button id="west" type="button" aria-pressed="false">Westbound</button>
-        </div>
-      </div>
+      <div class="control"><label class="control-label" for="borough">Borough</label><select id="borough" disabled></select></div>
+      <div class="control"><label class="control-label" for="route">Route</label><select id="route" disabled></select></div>
+      <div class="control"><label class="control-label" for="direction">Direction</label><select id="direction" disabled></select></div>
       <div class="control">
         <label class="control-label" for="day">Day of week</label>
         <select id="day">
@@ -41,11 +37,13 @@
     </section>
 
     <div class="context">
-      <span id="context">Loading B4 observations…</span>
+      <span id="context">Loading route catalog…</span>
       <div id="chips" aria-label="Active selections"></div>
     </div>
 
     <p id="error" hidden role="alert"></p>
+    <button id="retry-route" type="button" hidden>Retry loading</button>
+    <p class="chart-note" id="route-note"></p>
     <div id="dashboard" aria-busy="true">
       <section class="panel bars-panel" aria-labelledby="bars-title">
         <header class="panel-heading">
@@ -95,12 +93,40 @@
         <section class="panel month-panel" aria-labelledby="month-title">
           <header class="panel-heading">
             <div>
-              <h2 id="month-title">Monthly road speed</h2>
-              <p class="subtitle">Full year shown for comparison</p>
+              <div class="month-title-row">
+                <h2 id="month-title">Monthly road speed</h2>
+                <button id="month-info" class="info-button" type="button" aria-label="About monthly chart gaps" aria-expanded="false" aria-controls="month-help"><span aria-hidden="true">i</span></button>
+              </div>
+              <p class="subtitle month-gap-note">Gaps mean no matching observations; a single dot means only one observed month.</p>
             </div>
           </header>
+          <div id="month-help" class="month-help" hidden>
+            <strong>Why are some lines broken?</strong>
+            <p>Each point represents a month with observations for that segment. Lines connect consecutive observed months only.</p>
+            <p>A gap means the dataset has no observations for that month, or the selected weekday and hours leave no matching observations. It does not necessarily mean the bus stopped operating. Missing months are not zero speed.</p>
+            <p>Selecting a month filters the other charts; this chart keeps all twelve months for comparison.</p>
+          </div>
           <p class="finding" id="month-finding"></p>
-          <div class="chart-scroll"><div id="monthly" class="chart"></div></div>
+          <div class="control" style="padding: 0 20px 12px; min-width: 0;">
+            <label class="control-label" for="segment-picker">Inspect segment coverage</label>
+            <select id="segment-picker" style="max-width: 100%; width: 100%;" aria-describedby="month-coverage"></select>
+          </div>
+                    <div class="chart-scroll"><div id="monthly" class="chart"></div></div>
+          <div class="coverage-panel">
+            <p id="month-coverage" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div id="coverage-details" hidden>
+              <p id="coverage-segment"></p>
+              <ul id="month-availability" class="month-availability" aria-label="Selected segment monthly availability"></ul>
+              <ul class="availability-legend" aria-label="Availability legend">
+                <li><span class="availability-mark observed" aria-hidden="true"></span> Observed</li>
+                <li><span class="availability-mark absent" aria-hidden="true"></span> No data</li>
+                <li><span class="availability-mark filtered" aria-hidden="true"></span> No filter matches</li>
+              </ul>
+              <p id="coverage-source"></p>
+              <p id="coverage-filters" hidden></p>
+              <p class="coverage-caution">Missing observations do not necessarily mean the bus did not operate.</p>
+            </div>
+          </div>
           <p class="chart-note month-note">Select a month to filter the bars and heatmap. Select a line to highlight its segment.</p>
           <div class="selected-detail" id="selection-detail" hidden></div>
         </section>
@@ -114,3 +140,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+

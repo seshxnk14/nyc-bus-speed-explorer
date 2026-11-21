@@ -15,8 +15,9 @@ const rowIndexes = new WeakMap();
 function indexRows(data) {
   if (rowIndexes.has(data)) return rowIndexes.get(data);
   const index = new Map();
+  const directions = new Map(data.segments.map(s => [s.id, s.direction]));
   for (const row of data.rows) {
-    const direction = row[0].split('-')[0];
+    const direction = directions.get(row[0]);
     for (const key of [direction + ':all', direction + ':' + row[2]]) {
       if (!index.has(key)) index.set(key, []);
       index.get(key).push(row);
@@ -78,7 +79,7 @@ export function initialState() {
 }
 export function reduceState(state, action) {
   switch (action.type) {
-    case 'reset': return initialState();
+    case 'reset': return {...initialState(), direction: state.direction};
     case 'direction': return {...state, direction: action.value, selected: null};
     case 'day': return {...state, day: action.value};
     case 'segment': return {...state, selected: state.selected === action.value ? null : action.value};
@@ -91,3 +92,4 @@ export function reduceState(state, action) {
     default: return state;
   }
 }
+

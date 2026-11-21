@@ -50,7 +50,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
   function bars(host, view, state) {
     const width = 1200, left = 405, right = 75, top = 22, rowHeight = 46;
     const height = top + view.length * rowHeight + 40;
-    const svg = chart(host, width, height, 'Segment average road speeds in route order');
+    const svg = chart(host, width, height, 'Segment average road speeds in source stop-position order');
     const maximum = Math.max(12, Math.ceil(d3.max(view, d => d.bar.speed) / 2) * 2 || 12);
     const x = d3.scaleLinear().domain([0, maximum]).range([left, width - right]);
     const y = d3.scaleBand().domain(view.map(d => d.id)).range([top, top + view.length * rowHeight]);
@@ -91,7 +91,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     rows.select('.stop-from').attr('x', 38).attr('y', 8).attr('font-size', 13).attr('fill', palette.ink).text(d => d.from);
     rows.select('.stop-to').attr('x', 38).attr('y', 24).attr('font-size', 12).attr('fill', palette.muted).text(d => `→ ${d.to}`);
     rows.select('.distance').attr('x', left - 18).attr('y', 16).attr('text-anchor', 'end')
-      .attr('font-size', 10).attr('fill', palette.muted).text(d => `${d.distance.toFixed(2)} mi`);
+      .attr('font-size', 10).attr('fill', palette.muted).text(d => `${d.distance.toFixed(2)} mi avg`);
     animate(rows.select('.speed-bar')).attr('x', x(0)).attr('y', 7)
       .attr('height', 12).attr('rx', 2).attr('width', d => d.bar.speed === null ? 0 : x(d.bar.speed) - x(0))
       .attr('fill', d => d.id === state.selected ? palette.ink : palette.bar);
@@ -103,7 +103,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
       .attr('font-size', 12).attr('font-weight', 600).attr('fill', palette.ink)
       .text(d => d.bar.speed === null ? 'No observations' : fmt(d.bar.speed));
     interactive(rows, d => `Select ${segmentName(d)}`, d => onSegment(d.id), d =>
-      `${segmentName(d)}\n${fmt(d.bar.speed)} mph · ${count(d.bar.trips)} observed trips\n${d.distance.toFixed(3)} miles · ${count(d.bar.records)} source records`);
+      `${segmentName(d)}\n${fmt(d.bar.speed)} mph · ${count(d.bar.trips)} observed trips\n${d.distance.toFixed(3)} miles (full-year mean; range ${(d.distanceMin ?? d.distance).toFixed(3)}–${(d.distanceMax ?? d.distance).toFixed(3)}) · ${count(d.bar.records)} source records`);
     return maxTrips;
   }
 
@@ -244,3 +244,4 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
 
   return {bars, heatmap, monthly};
 }
+
