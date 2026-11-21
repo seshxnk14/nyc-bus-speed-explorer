@@ -48,12 +48,12 @@
       <section class="panel bars-panel" aria-labelledby="bars-title">
         <header class="panel-heading">
           <div>
-            <h2 id="bars-title">Road speed by segment</h2>
+            <div class="chart-title-row"><h2 id="bars-title">Road speed by segment</h2><button class="info-button chart-help-toggle" type="button" aria-label="About road speed by segment" aria-expanded="false" aria-controls="bars-guide"><span aria-hidden="true">i</span></button></div>
             <p class="subtitle" id="bar-subtitle"></p>
           </div>
           <button id="export" class="secondary" type="button" title="Download the speed and trip totals shown in the bar chart">Export CSV</button>
         </header>
-        <p class="finding" id="bar-finding"></p>
+        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="finding" id="bar-finding"></p>
         <div class="chart-scroll"><div id="bars" class="chart"></div></div>
         <div class="chart-footer">
           <span>Select a segment to highlight it across all views.</span>
@@ -65,11 +65,11 @@
         <section class="panel heat-panel" aria-labelledby="heat-title">
           <header class="panel-heading">
             <div>
-              <h2 id="heat-title">Hourly speed vs. usual</h2>
+              <div class="chart-title-row"><h2 id="heat-title">Hourly speed vs. usual</h2><button class="info-button chart-help-toggle" type="button" aria-label="About hourly speed vs. usual" aria-expanded="false" aria-controls="heat-guide"><span aria-hidden="true">i</span></button></div>
               <p class="subtitle" id="heat-subtitle"></p>
             </div>
           </header>
-          <p class="finding" id="heat-finding"></p>
+          <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline. Orange means slower, blue means faster. Hatching means no observations.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div><p class="finding" id="heat-finding"></p>
           <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap" aria-describedby="heat-reading-note">Click to show values</button>
           <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
           <div class="heat-legend">
@@ -96,24 +96,25 @@
             <div>
               <div class="month-title-row">
                 <h2 id="month-title">Monthly road speed</h2>
-                <button id="month-info" class="info-button" type="button" aria-label="About monthly chart gaps" aria-expanded="false" aria-controls="month-help"><span aria-hidden="true">i</span></button>
+                <button id="monthly-guide-button" class="info-button chart-help-toggle" type="button" aria-label="About monthly road speed" aria-expanded="false" aria-controls="monthly-guide"><span aria-hidden="true">i</span></button>
               </div>
-              <p class="subtitle month-gap-note">Gaps mean no matching observations; a single dot means only one observed month.</p>
             </div>
+            <button id="expand-monthly" class="expand-chart-button" type="button" aria-label="Expand monthly chart" aria-haspopup="dialog" aria-controls="monthly-dialog" title="Expand monthly chart">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg>
+            </button>
           </header>
-          <div id="month-help" class="month-help" hidden>
+          <div id="monthly-guide" class="chart-guide" hidden><p>Each line shows a segment’s monthly road speed in mph. Points mark observed months, lines connect consecutive observed months only.</p></div><p class="finding" id="month-finding"></p>
+          <div class="control" style="padding: 0 20px 12px; min-width: 0;">
+            <select id="segment-picker" aria-label="Select segment" style="max-width: 100%; width: 100%;" aria-describedby="month-coverage"></select>
+          </div>
+                    <div class="monthly-selection-bar"><button id="monthly-selection-chip" class="monthly-selection-chip" type="button" hidden></button></div><div class="chart-scroll"><div id="monthly" class="chart"></div></div>
+          <div class="coverage-panel"><button id="month-info" class="coverage-read-more" type="button" aria-expanded="false" aria-controls="month-help">Why are some lines broken?</button>          <div id="month-help" class="month-help" hidden>
             <strong>Why are some lines broken?</strong>
             <p>Each point represents a month with observations for that segment. Lines connect consecutive observed months only.</p>
             <p>A gap means the dataset has no observations for that month, or the selected weekday and hours leave no matching observations. It does not necessarily mean the bus stopped operating. Missing months are not zero speed.</p>
             <p>Selecting a month filters the other charts; this chart keeps all twelve months for comparison.</p>
           </div>
-          <p class="finding" id="month-finding"></p>
-          <div class="control" style="padding: 0 20px 12px; min-width: 0;">
-            <label class="control-label" for="segment-picker">Inspect segment coverage</label>
-            <select id="segment-picker" style="max-width: 100%; width: 100%;" aria-describedby="month-coverage"></select>
-          </div>
-                    <div class="chart-scroll"><div id="monthly" class="chart"></div></div>
-          <div class="coverage-panel">
+
             <p id="month-coverage" role="status" aria-live="polite" aria-atomic="true"></p>
             <div id="coverage-details" hidden>
               <p id="coverage-segment"></p>
@@ -129,7 +130,7 @@
             </div>
           </div>
           <p class="chart-note month-note">Select a month to filter the bars and heatmap. Select a line to highlight its segment.</p>
-          <div class="selected-detail" id="selection-detail" hidden></div>
+          
         </section>
       </div>
     </div>
@@ -138,7 +139,15 @@
   </main>
   <div id="tooltip" role="tooltip" hidden></div>
   <div id="announcement" class="sr-only" aria-live="polite"></div>
+  <dialog id="monthly-dialog" aria-labelledby="month-title" aria-describedby="monthly-dialog-context">
+    <div class="monthly-dialog-toolbar">
+      <p id="monthly-dialog-context"></p>
+      <button type="button" id="close-monthly" autofocus aria-label="Close expanded monthly chart">Close <span aria-hidden="true">×</span></button>
+    </div>
+    <div id="monthly-dialog-content"></div>
+  </dialog>
   <script type="module" src="app.js"></script>
+  <script type="module" src="monthly-expand.js"></script><script type="module" src="chart-help.js"></script>
 </body>
 </html>
 

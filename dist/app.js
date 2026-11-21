@@ -46,8 +46,8 @@ function render() {
   const month = state.month ? MONTHS[state.month - 1] : 'All months';
   const hours = state.hours ? `${hour(state.hours[0])}–${hour(state.hours[1] + 1)}` : 'All hours';
   $('#context').textContent = `${data.meta.route} · ${directionName(state.direction)} · ${day} · ${view.length} segment positions`;
-  $('#bar-subtitle').textContent = `${month} · ${hours} · Ordered by earliest observed stop position`;
-  $('#heat-subtitle').textContent = `${month} · Relative to each segment’s all-day speed across available 2025 observations for ${state.day === 'all' ? 'all days' : day + 's'}`;
+  $('#bar-subtitle').textContent = `${month} · ${hours} `;
+  $('#heat-subtitle').textContent = `${month} `;
 
   const insights = findings(view, state);
   $('#bar-finding').textContent = insights.bar;
@@ -80,20 +80,13 @@ function render() {
   $('#dot-scale').textContent = maxTrips ? `· largest: ${count(Math.max(...view.map(d => d.bar.trips)))}` : '';
 
   const selected = view.find(d => d.id === state.selected);
-  const detail = $('#selection-detail');
-  detail.replaceChildren();
-  detail.hidden = !selected;
+  const chip = $('#monthly-selection-chip');
+  chip.hidden = !selected;
   if (selected) {
-    const label = document.createElement('div');
-    label.className = 'detail-label';
-    label.textContent = 'Selected segment';
-    const strong = document.createElement('strong');
-    strong.textContent = name(selected);
-    const small = document.createElement('small');
-    small.textContent = selected.bar.speed === null
-      ? 'No observations match the current filters.'
-      : `${fmt(selected.bar.speed)} mph · ${count(selected.bar.trips)} observed trips in the bar view`;
-    detail.append(label, strong, small);
+    const number = view.findIndex(d => d.id === selected.id) + 1;
+    chip.textContent = `Segment ${number} ×`;
+    chip.title = name(selected);
+    chip.setAttribute('aria-label', `Clear selection: Segment ${number}, ${name(selected)}`);
   }
   $('#dashboard').setAttribute('aria-busy', 'false');
   $('#announcement').textContent = `${directionName(state.direction)}, ${day}, ${month}, ${hours}${selected ? ', selected ' + name(selected) : ''}`;
@@ -163,7 +156,7 @@ async function selectRoute() {
     options($('#direction'), entry.directions, directionName);
     state = {...initialState(), direction: entry.directions[0]};
     const exclusions = entry.quarantinedRows || 0;
-    $('#route-note').textContent = `Borough follows the source classification. Each row is a directed endpoint pair, ordered by its earliest observed stop position; positions may change during the year. Distances shown are full-year trip-weighted means.${exclusions ? ` ${exclusions} source records excluded because numeric values were invalid.` : ''}`;
+    // $('#route-note').textContent = `Borough follows the source classification. Each row is a directed endpoint pair, ordered by its earliest observed stop position; positions may change during the year. Distances shown are full-year trip-weighted means.${exclusions ? ` ${exclusions} source records excluded because numeric values were invalid.` : ''}`;
     busy(false);
     render();
   } catch (error) {
@@ -214,5 +207,9 @@ async function start() {
     $('#retry-route').hidden = false;
   }
 }
+$('#monthly-selection-chip').onclick = () => {
+  dispatch({type: 'clear', key: 'selected'});
+  $('#segment-picker').focus();
+};
 setupMonthlyHelp();
 start();
