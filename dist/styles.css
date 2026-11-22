@@ -181,3 +181,8 @@ button.monthly-selection-chip[hidden] { display: none; }
 #dashboard.awaiting-route #expand-monthly { display: none; }
 #dashboard.awaiting-route .route-prompt { display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 20px; margin: 0; color: #4d6268; text-align: center; }
 #route-note:empty { display: none; }
+
+.selection-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.selection-actions[hidden] { display: none; }
+.selection-actions #reset { font-size: 12px; min-height: 30px; padding: 4px 10px; }
+button:disabled { cursor: default; opacity: 0.55; }

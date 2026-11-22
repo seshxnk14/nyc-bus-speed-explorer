@@ -33,12 +33,12 @@
           <option value="6">Sunday</option>
         </select>
       </div>
-      <button class="reset" id="reset" type="button" disabled>Reset filters</button>
+      <button class="reset" id="start-over" type="button" disabled>Start over</button>
     </section>
 
     <div class="context">
       <span id="context">Loading route catalog…</span>
-      <div id="chips" aria-label="Active selections"></div>
+      <div class="selection-actions" hidden><div id="chips" aria-label="Active selections"></div><button id="reset" type="button" disabled>Reset filters</button></div>
     </div>
 
     <p id="error" hidden role="alert"></p>
@@ -53,7 +53,7 @@
           </div>
           <button id="export" class="secondary" type="button" title="Download the speed and trip totals shown in the bar chart">Export CSV</button>
         </header>
-        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="route-prompt" role="status">Select a borough and a route to get started</p><p class="finding" id="bar-finding"></p>
+        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="route-prompt" role="status">Select a borough and a route to get started.</p><p class="finding" id="bar-finding"></p>
         <div class="chart-scroll"><div id="bars" class="chart"></div></div>
         <div class="chart-footer">
           <span>Select a segment to highlight it across all views.</span>

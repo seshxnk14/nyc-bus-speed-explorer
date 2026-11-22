@@ -78,6 +78,7 @@ function render() {
   const maxTrips = charts.bars('#bars', view, state);
   charts.heatmap('#heatmap', view, state);
   charts.monthly('#monthly', view, state);
+  $('#reset').disabled = state.selected === null && state.hours === null && state.month === null;
   $('#dot-scale').textContent = maxTrips ? `· largest: ${count(Math.max(...view.map(d => d.bar.trips)))}` : '';
 
   const selected = view.find(d => d.id === state.selected);
@@ -105,7 +106,16 @@ $('#hour-end').value = 23;
 $('#segment-picker').onchange = event => dispatch(event.target.value ? {type: 'segment', value: event.target.value} : {type: 'clear', key: 'selected'});
 $('#direction').onchange = event => dispatch({type: 'direction', value: event.target.value});
 $('#day').onchange = event => dispatch({type: 'day', value: event.target.value});
-$('#reset').onclick = () => dispatch({type: 'reset'});
+$('#reset').onclick = () => {
+  if (loading || !data) return;
+  state = {...state, selected: null, hours: null, month: null};
+  render();
+};
+$('#start-over').onclick = () => {
+  $('#borough').value = '';
+  selectBorough();
+  $('#borough').focus();
+};
 $('#apply-hours').onclick = () => dispatch({type: 'hours', value: [Number($('#hour-start').value), Number($('#hour-end').value)]});
 $('#clear-hours').onclick = () => dispatch({type: 'hours', value: null});
 
@@ -134,12 +144,14 @@ function options(select, values, label = value => value) {
 }
 function busy(value) {
   loading = value;
+  $('.selection-actions').hidden = value || !data;
+  $('#start-over').disabled = !catalog || (!data && !$('#route').value && !$('#borough').value);
   $('#dashboard').hidden = false;
   $('#dashboard').classList.toggle('awaiting-route', value || !data);
   $('#dashboard').setAttribute('aria-busy', String(value));
   for (const selector of ['#direction', '#day', '#reset', '#export', '#apply-hours', '#clear-hours']) $(selector).disabled = value;
 }
-function emptyRoute(message = 'Select a borough and a route to get started') {
+function emptyRoute(message = 'Select a borough and a route to get started.') {
   routeRequest++;
   data = null; view = null; activeEntry = null;
   state = initialState();
