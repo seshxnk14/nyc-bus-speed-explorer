@@ -22,7 +22,7 @@
       <div class="control"><label class="control-label" for="direction">Direction</label><select id="direction" disabled></select></div>
       <div class="control">
         <label class="control-label" for="day">Day of week</label>
-        <select id="day">
+        <select id="day" disabled>
           <option value="all">All days</option>
           <option value="0">Monday</option>
           <option value="1">Tuesday</option>
@@ -33,7 +33,7 @@
           <option value="6">Sunday</option>
         </select>
       </div>
-      <button class="reset" id="reset" type="button">Reset filters</button>
+      <button class="reset" id="reset" type="button" disabled>Reset filters</button>
     </section>
 
     <div class="context">
@@ -44,7 +44,7 @@
     <p id="error" hidden role="alert"></p>
     <button id="retry-route" type="button" hidden>Retry loading</button>
     <p class="chart-note" id="route-note"></p>
-    <div id="dashboard" aria-busy="true">
+    <div id="dashboard" class="awaiting-route" aria-busy="true">
       <section class="panel bars-panel" aria-labelledby="bars-title">
         <header class="panel-heading">
           <div>
@@ -53,7 +53,7 @@
           </div>
           <button id="export" class="secondary" type="button" title="Download the speed and trip totals shown in the bar chart">Export CSV</button>
         </header>
-        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="finding" id="bar-finding"></p>
+        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="route-prompt" role="status">Select a borough and a route to get started</p><p class="finding" id="bar-finding"></p>
         <div class="chart-scroll"><div id="bars" class="chart"></div></div>
         <div class="chart-footer">
           <span>Select a segment to highlight it across all views.</span>
@@ -69,7 +69,7 @@
               <p class="subtitle" id="heat-subtitle"></p>
             </div>
           </header>
-          <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline. Orange means slower, blue means faster. Hatching means no observations.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div><p class="finding" id="heat-finding"></p>
+          <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div><p class="finding" id="heat-finding"></p>
           <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap" aria-describedby="heat-reading-note">Click to show values</button>
           <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
           <div class="heat-legend">
@@ -79,7 +79,7 @@
             </div>
             <span class="gap-key"><i class="gap-sample" aria-hidden="true"></i> No observations</span>
           </div>
-          <p class="chart-note" id="heat-reading-note">Orange: slower. Blue: faster. Neutral: usual speed. Hatching: no observations. Colors cap at ±50%. Show values for signed percentages, rounded to whole numbers; values below 1% retain their sign. Hover or focus for precise values.</p>
+          <p class="chart-note" id="heat-reading-note">Orange: slower. Blue: faster. Neutral: usual speed. Hatching: no observations 
           <div class="hour-panel">
             <p class="chart-note">Drag across hours to filter the bars and monthly lines, or use the controls below.</p>
             <div class="hour-controls" role="group" aria-label="Select hour range">

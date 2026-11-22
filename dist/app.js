@@ -9,6 +9,7 @@ import {findings} from './findings.js';
 const $ = selector => document.querySelector(selector);
 let data, view, charts, catalog, activeEntry;
 let loading = true;
+let routeRequest = 0;
 const loadRoute = createRouteLoader();
 let state = initialState();
 const fmt = value => value === null ? '—' : value.toFixed(1);
@@ -29,7 +30,7 @@ function tooltip(event, text) {
 }
 
 function dispatch(action) {
-  if (loading) return;
+  if (loading || !data) return;
   state = reduceState(state, action);
   render();
 }
@@ -46,8 +47,8 @@ function render() {
   const month = state.month ? MONTHS[state.month - 1] : 'All months';
   const hours = state.hours ? `${hour(state.hours[0])}–${hour(state.hours[1] + 1)}` : 'All hours';
   $('#context').textContent = `${data.meta.route} · ${directionName(state.direction)} · ${day} · ${view.length} segment positions`;
-  $('#bar-subtitle').textContent = `${month} · ${hours} `;
-  $('#heat-subtitle').textContent = `${month} `;
+  $('#bar-subtitle').textContent = `${month} · ${hours}`;
+  $('#heat-subtitle').textContent = `${month} · ${day}`;
 
   const insights = findings(view, state);
   $('#bar-finding').textContent = insights.bar;
@@ -133,45 +134,69 @@ function options(select, values, label = value => value) {
 }
 function busy(value) {
   loading = value;
-  $('#dashboard').hidden = value;
+  $('#dashboard').hidden = false;
+  $('#dashboard').classList.toggle('awaiting-route', value || !data);
   $('#dashboard').setAttribute('aria-busy', String(value));
   for (const selector of ['#direction', '#day', '#reset', '#export', '#apply-hours', '#clear-hours']) $(selector).disabled = value;
 }
+function emptyRoute(message = 'Select a borough and a route to get started') {
+  routeRequest++;
+  data = null; view = null; activeEntry = null;
+  state = initialState();
+  hideTooltip();
+  $('#chips').replaceChildren();
+  for (const id of ['bars', 'heatmap', 'monthly']) $('#' + id).replaceChildren();
+  options($('#direction'), []);
+  $('#day').value = 'all';
+  $('#error').hidden = true;
+  $('#retry-route').hidden = true;
+  $('#context').textContent = '';
+  $('.route-prompt').textContent = message;
+  busy(true);
+  $('#dashboard').setAttribute('aria-busy', 'false');
+}
 async function selectRoute() {
   const entry = catalog.routes.find(r => r.route === $('#route').value);
-  if (!entry) return;
+  if (!entry) { emptyRoute(); return; }
+  const request = ++routeRequest;
   activeEntry = entry;
   busy(true);
+  $('.route-prompt').textContent = `Loading ${entry.route}…`;
   data = null; view = null;
   hideTooltip();
   $('#chips').replaceChildren();
-  $('#route-note').textContent = '';
   $('#error').hidden = true;
   $('#retry-route').hidden = true;
   $('#context').textContent = `Loading ${entry.route}…`;
   try {
     const loaded = await loadRoute(entry, catalog);
-    if (!loaded) return;
+    if (!loaded || request !== routeRequest) return;
     data = loaded;
     options($('#direction'), entry.directions, directionName);
     state = {...initialState(), direction: entry.directions[0]};
     const exclusions = entry.quarantinedRows || 0;
-    // $('#route-note').textContent = `Borough follows the source classification. Each row is a directed endpoint pair, ordered by its earliest observed stop position; positions may change during the year. Distances shown are full-year trip-weighted means.${exclusions ? ` ${exclusions} source records excluded because numeric values were invalid.` : ''}`;
     busy(false);
     render();
   } catch (error) {
+    if (request !== routeRequest) return;
+    $('.route-prompt').textContent = 'Route could not be loaded. Use Retry loading above.';
+    $('#dashboard').setAttribute('aria-busy', 'false');
     $('#context').textContent = `${entry.route} unavailable`;
     $('#error').textContent = error.message;
     $('#error').hidden = false;
     $('#retry-route').hidden = false;
   }
 }
+function placeholder(select, text) {
+  select.prepend(new Option(text, ''));
+  select.value = '';
+}
 function selectBorough() {
-  const entries = routesForBorough(catalog, $('#borough').value);
-  const previous = $('#route').value;
-  options($('#route'), entries.map(r => r.route));
-  $('#route').value = entries.some(r => r.route === previous) ? previous : entries[0].route;
-  selectRoute();
+  emptyRoute();
+  const borough = $('#borough').value;
+  options($('#route'), borough ? routesForBorough(catalog, borough).map(r => r.route) : []);
+  placeholder($('#route'), 'Select a route');
+  $('#route').disabled = !borough;
 }
 $('#borough').onchange = selectBorough;
 $('#route').onchange = selectRoute;
@@ -193,16 +218,15 @@ async function start() {
     });
     const boroughs = [...new Set(catalog.routes.flatMap(r => r.boroughs))].sort();
     options($('#borough'), boroughs);
-    $('#borough').value = boroughs.includes('Brooklyn') ? 'Brooklyn' : boroughs[0];
-    options($('#route'), routesForBorough(catalog, $('#borough').value).map(r => r.route));
-    if (routesForBorough(catalog, $('#borough').value).some(r => r.route === 'B4')) $('#route').value = 'B4';
+    placeholder($('#borough'), 'Select a borough');
     $('#borough').disabled = false;
-    $('#route').disabled = false;
-    await selectRoute();
+    selectBorough();
   } catch (error) {
     $('#error').hidden = false;
     $('#error').textContent = error.message;
-    $('#dashboard').hidden = true;
+    $('#dashboard').hidden = false;
+    $('.route-prompt').textContent = 'Unable to load the route catalog. Use Retry loading above.';
+    $('#dashboard').setAttribute('aria-busy', 'false');
     $('#context').textContent = 'Dashboard unavailable';
     $('#retry-route').hidden = false;
   }
