@@ -116,8 +116,10 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
         toggle.setAttribute('aria-pressed', String(!showValues));
         heatmap(host, view, state);
       });
-    d3.select(host).classed('show-heat-values', showValues);
-    const width = 640, left = 38, top = 15, right = 7, rowHeight = 34;
+    const expanded = Boolean(document.getElementById('heatmap-dialog')?.open);
+    d3.select(host).classed('show-heat-values', showValues)
+      .on('heatmap-layout', () => heatmap(host, view, state));
+    const width = showValues || expanded ? 1440 : 640, left = 38, top = 15, right = 7, rowHeight = 34;
     const bottom = top + view.length * rowHeight;
     const svg = chart(host, width, bottom + 52, '24 hourly columns for each segment; drag to select hours');
     const x = d3.scaleBand().domain(d3.range(24)).range([left, width - right]).paddingInner(0.08);
@@ -156,7 +158,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
         .data(showValues ? segment.hourly.map((v,h)=>({...v,h})).filter(d=>Number.isFinite(d.delta)) : [], d=>d.h)
         .join('text').attr('class','delta-value').attr('x',d=>x(d.h)+x.bandwidth()/2)
         .attr('y',y(segment.id)+y.bandwidth()/2).attr('dy','0.35em')
-        .attr('text-anchor','middle').attr('font-size',7).attr('font-weight',500)
+        .attr('text-anchor','middle').attr('font-size',13).attr('font-weight',500)
         .attr('fill',d=>state.selected != null && segment.id !== state.selected ? '#192c32' : heatTextColor(d.delta)).attr('pointer-events','none')
         .attr('aria-hidden','true')
         .text(d=>d.delta === 0 ? '0%' : Math.abs(d.delta) < 1

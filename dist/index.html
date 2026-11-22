@@ -68,7 +68,7 @@
               <div class="chart-title-row"><h2 id="heat-title">Hourly speed vs. usual</h2><button class="info-button chart-help-toggle" type="button" aria-label="About hourly speed vs. usual" aria-expanded="false" aria-controls="heat-guide"><span aria-hidden="true">i</span></button></div>
               <p class="subtitle" id="heat-subtitle"></p>
             </div>
-          </header>
+          <button id="expand-heatmap" class="expand-chart-button" type="button" aria-label="Expand heatmap" aria-haspopup="dialog" aria-controls="heatmap-dialog" title="Expand heatmap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg></button></header>
           <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div><p class="finding" id="heat-finding"></p>
           <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap" aria-describedby="heat-reading-note">Click to show values</button>
           <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
@@ -146,6 +146,8 @@
     </div>
     <div id="monthly-dialog-content"></div>
   </dialog>
+  <dialog id="heatmap-dialog" aria-labelledby="heat-title" aria-describedby="heatmap-dialog-context"><div class="heatmap-dialog-toolbar"><p id="heatmap-dialog-context"></p><button type="button" id="close-heatmap" autofocus aria-label="Close expanded heatmap">Close <span aria-hidden="true">×</span></button></div><div id="heatmap-dialog-content"></div></dialog>
+  <script type="module" src="heatmap-expand.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="monthly-expand.js"></script><script type="module" src="chart-help.js"></script>
 </body>
