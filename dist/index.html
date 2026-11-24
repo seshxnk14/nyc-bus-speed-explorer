@@ -6,12 +6,13 @@
   <meta name="description" content="Explore 2025 NYC Local bus speeds by segment, hour and month.">
   <title>NYC Bus Speed Explorer</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="introduction.css">
 </head>
 <body>
   <main class="workspace">
     <header class="masthead">
       <div>
-        <h1>NYC Bus Speed Explorer</h1>
+        <div class="dashboard-title-row"><h1>NYC Bus Speed Explorer</h1><button id="intro-open" type="button" aria-label="Introduction to NYC Bus Speed Explorer" aria-haspopup="dialog" aria-controls="intro-dialog"><span aria-hidden="true">i</span></button></div>
         <p>Five boroughs · 2025 Local service</p>
       </div>
     </header>
@@ -150,6 +151,22 @@
   <script type="module" src="heatmap-expand.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="monthly-expand.js"></script><script type="module" src="chart-help.js"></script>
+  <dialog id="intro-dialog" aria-labelledby="intro-title">
+    <div class="intro-heading"><h2 id="intro-title">Explore the journey behind the numbers</h2><button id="intro-close" type="button" aria-label="Close introduction" autofocus>×</button></div>
+    <div class="intro-body">
+      <p>Where do NYC Local buses move slowly, and how does that change by hour and month? Explore 2025 MTA observations across all five boroughs.</p>
+      <p><strong>Start with a borough and route.</strong> Then choose a direction and, if useful, a day of the week.</p>
+      <ul>
+        <li><strong>Road speed by segment:</strong> compare speeds along the route. Dot size shows observed trip counts.</li>
+        <li><strong>Hourly speed vs. usual:</strong> find hours that are slower or faster than each segment’s own all-day baseline.</li>
+        <li><strong>Monthly road speed:</strong> explore changes through the year and see which months have observations.</li>
+      </ul>
+      <p>Select a segment to highlight it across the views. Select a month or hour range to focus the analysis. Expand the heatmap or monthly chart for a closer look.</p>
+      <p class="intro-note">Missing observations do not mean zero speed or prove that buses did not operate. Each chart’s info button explains its calculations and controls.</p>
+      <p class="intro-reopen">You can reopen this introduction using the info button beside the dashboard title.</p>
+    </div>
+  </dialog>
+  <script type="module" src="introduction.js"></script>
 </body>
 </html>
 
