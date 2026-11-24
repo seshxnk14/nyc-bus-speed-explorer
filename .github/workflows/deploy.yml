@@ -1,0 +1,88 @@
+name: Deploy dashboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install D3
+        run: npm install
+
+      - name: Download prepared data
+        run: |
+          curl --fail --location --retry 3 \
+            "https://github.com/seshxnk14/nyc-bus-speed-explorer/releases/download/data-2025-v1/nyc-data-v6.zip" \
+            --output "$RUNNER_TEMP/nyc-data.zip"
+          echo "fe7251f22f571367f0d9a9831b8cb1c8ead4128b3da6830e5a2737484f81a3f0  $RUNNER_TEMP/nyc-data.zip" | sha256sum --check
+
+      - name: Extract and prepare website data
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import shutil
+          import zipfile
+          from pathlib import Path
+
+          temporary = Path(os.environ["RUNNER_TEMP"])
+          extracted = temporary / "nyc-extracted"
+
+          with zipfile.ZipFile(temporary / "nyc-data.zip") as archive:
+              archive.extractall(extracted)
+
+          catalogs = [
+              path for path in extracted.rglob("catalog.json")
+              if "__MACOSX" not in path.parts
+          ]
+          if len(catalogs) != 1:
+              raise RuntimeError("Expected exactly one catalog.json in the ZIP")
+
+          source = catalogs[0].parent
+          catalog = json.loads(catalogs[0].read_text())
+          destination = Path("dist/nyc-data-v6")
+          destination.mkdir(parents=True, exist_ok=True)
+
+          shutil.copy2(catalogs[0], destination / "catalog.json")
+          for route in catalog["routes"]:
+              relative = Path(route["file"])
+              if relative.is_absolute() or ".." in relative.parts:
+                  raise RuntimeError("Invalid route file path")
+              target = destination / relative
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(source / relative, target)
+
+          print(f"Prepared {len(catalog['routes'])} routes for deployment")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
