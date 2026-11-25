@@ -42,7 +42,14 @@ function render() {
   $('#direction').value = state.direction;
   $('#day').value = state.day;
   $('#hour-start').value = state.hours?.[0] ?? 0;
-  $('#hour-end').value = state.hours?.[1] ?? 23;
+  $('#hour-end').value = state.hours ? state.hours[1] + 1 : 24;
+  updateHourChoices();
+  const hourChip = $('#heat-hour-chip');
+  hourChip.hidden = !state.hours;
+  if (state.hours) {
+    hourChip.textContent = `${hour(state.hours[0])}–${hour(state.hours[1] + 1)} ×`;
+    hourChip.setAttribute('aria-label', 'Clear selected hours');
+  }
   const day = state.day === 'all' ? 'All days' : DAYS[Number(state.day)];
   const month = state.month ? MONTHS[state.month - 1] : 'All months';
   const hours = state.hours ? `${hour(state.hours[0])}–${hour(state.hours[1] + 1)}` : 'All hours';
@@ -51,8 +58,6 @@ function render() {
   $('#heat-subtitle').textContent = `${month} · ${day}`;
 
   const insights = findings(view, state);
-  $('#bar-finding').textContent = insights.bar;
-  $('#heat-finding').textContent = insights.heat;
   $('#month-finding').textContent = insights.month;
   renderCoverage(view, state.selected);
   const picker = $('#segment-picker');
@@ -95,14 +100,14 @@ function render() {
 }
 
 for (const id of ['hour-start', 'hour-end']) {
-  for (let h = 0; h < 24; h++) {
+  for (let h = id === 'hour-start' ? 0 : 1; h <= (id === 'hour-start' ? 23 : 24); h++) {
     const option = document.createElement('option');
     option.value = h;
     option.textContent = hour(h);
     $('#' + id).append(option);
   }
 }
-$('#hour-end').value = 23;
+$('#hour-end').value = 24;
 $('#segment-picker').onchange = event => dispatch(event.target.value ? {type: 'segment', value: event.target.value} : {type: 'clear', key: 'selected'});
 $('#direction').onchange = event => dispatch({type: 'direction', value: event.target.value});
 $('#day').onchange = event => dispatch({type: 'day', value: event.target.value});
@@ -116,14 +121,28 @@ $('#start-over').onclick = () => {
   selectBorough();
   $('#borough').focus();
 };
-$('#apply-hours').onclick = () => dispatch({type: 'hours', value: [Number($('#hour-start').value), Number($('#hour-end').value)]});
+function updateHourChoices() {
+  const start = Number($('#hour-start').value);
+  for (const option of $('#hour-end').options) option.disabled = Number(option.value) <= start;
+  if (Number($('#hour-end').value) <= start) $('#hour-end').value = start + 1;
+}
+function applyHourRange() {
+  updateHourChoices();
+  dispatch({type: 'hours', value: [Number($('#hour-start').value), Number($('#hour-end').value) - 1]});
+}
+$('#hour-start').onchange = applyHourRange;
+$('#hour-end').onchange = applyHourRange;
+$('#heat-hour-chip').onclick = () => {
+  dispatch({type: 'hours', value: null});
+  $('#hour-start').focus();
+};
 $('#clear-hours').onclick = () => dispatch({type: 'hours', value: null});
 
 $('#export').onclick = () => {
   if (!view || loading) return;
   const rows = [
-    ['route', 'year', 'segment_id', 'segment_from', 'segment_to', 'direction', 'day', 'month', 'hour_start', 'hour_end', 'full_year_mean_road_distance_miles', 'average_speed_mph', 'observed_segment_trips'],
-    ...view.map(d => [data.meta.route, data.meta.year, d.id, d.from, d.to, state.direction, state.day === 'all' ? 'All' : DAYS[+state.day], state.month ?? 'All', state.hours?.[0] ?? 0, state.hours?.[1] ?? 23, d.distance, d.bar.speed ?? '', d.bar.trips])
+    ['route', 'year', 'segment_id', 'segment_from', 'segment_to', 'direction', 'day', 'month', 'hour_start', 'hour_end_exclusive', 'full_year_mean_road_distance_miles', 'average_speed_mph', 'observed_segment_trips'],
+    ...view.map(d => [data.meta.route, data.meta.year, d.id, d.from, d.to, state.direction, state.day === 'all' ? 'All' : DAYS[+state.day], state.month ?? 'All', state.hours?.[0] ?? 0, state.hours ? state.hours[1] + 1 : 24, d.distance, d.bar.speed ?? '', d.bar.trips])
   ];
   const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
@@ -149,7 +168,7 @@ function busy(value) {
   $('#dashboard').hidden = false;
   $('#dashboard').classList.toggle('awaiting-route', value || !data);
   $('#dashboard').setAttribute('aria-busy', String(value));
-  for (const selector of ['#direction', '#day', '#reset', '#export', '#apply-hours', '#clear-hours']) $(selector).disabled = value;
+  for (const selector of ['#direction', '#day', '#reset', '#export', '#hour-start', '#hour-end', '#heat-hour-chip', '#clear-hours']) $(selector).disabled = value;
 }
 function emptyRoute(message = 'Select a borough and a route to get started.') {
   routeRequest++;

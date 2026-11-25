@@ -36,6 +36,11 @@ export function renderCoverage(view, selected, root = document) {
   const details = root.querySelector('#coverage-details');
   const strip = root.querySelector('#month-availability');
   strip.replaceChildren();
+  const breakdown = root.querySelector('.coverage-breakdown');
+  if (breakdown && breakdown.dataset.segment !== String(selected)) {
+    breakdown.open = false;
+    breakdown.dataset.segment = String(selected);
+  }
   details.hidden = !segment;
   if (!segment) {
     const partial = view.filter(s => monthCoverage(s).visible.length < 12).length;
@@ -43,13 +48,11 @@ export function renderCoverage(view, selected, root = document) {
     return;
   }
   const {visible, missingSource, filteredOut} = monthCoverage(segment);
-  summary.textContent = `${visible.length} of 12 months observed for the selected segment.`;
-  root.querySelector('#coverage-segment').textContent = `${segment.from} → ${segment.to}`;
-  root.querySelector('#coverage-source').textContent = missingSource.length
-    ? `No observations in dataset: ${names(missingSource)}.` : 'All 12 months are present in the dataset.';
-  const filterNote = root.querySelector('#coverage-filters');
-  filterNote.hidden = !filteredOut.length;
-  filterNote.textContent = filteredOut.length ? `Additional gaps under current weekday/hour filters: ${names(filteredOut)}.` : '';
+  const missing = [];
+  if (missingSource.length) missing.push('No data: ' + names(missingSource));
+  if (filteredOut.length) missing.push('No filter matches: ' + names(filteredOut));
+  summary.textContent = (missing.length ? missing.join(' · ') + '. ' : 'No missing months. ') +
+    `${visible.length}/12 months observed.`;
   for (const {month, status} of monthStatuses(segment)) {
     const item = root.createElement('li');
     item.className = 'availability-month';

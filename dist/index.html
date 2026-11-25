@@ -54,7 +54,7 @@
           </div>
           <button id="export" class="secondary" type="button" title="Download the speed and trip totals shown in the bar chart">Export CSV</button>
         </header>
-        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="route-prompt" role="status">Select a borough and a route to get started.</p><p class="finding" id="bar-finding"></p>
+        <div id="bars-guide" class="chart-guide" hidden><p>Bar length shows road speed in mph under the current filters. Rows follow the earliest observed stop position along the route. Dot areas represent observed trips.</p><strong>How it’s calculated</strong><p>Speed = 60 × Σ(distance × trip count) ÷ Σ(average travel time × trip count). Distance is in miles and travel time in minutes. We combine estimated total miles and minutes rather than averaging row speeds.</p></div><p class="route-prompt" role="status">Select a borough and a route to get started.</p>
         <div class="chart-scroll"><div id="bars" class="chart"></div></div>
         <div class="chart-footer">
           <span>Select a segment to highlight it across all views.</span>
@@ -70,9 +70,19 @@
               <p class="subtitle" id="heat-subtitle"></p>
             </div>
           <button id="expand-heatmap" class="expand-chart-button" type="button" aria-label="Expand heatmap" aria-haspopup="dialog" aria-controls="heatmap-dialog" title="Expand heatmap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 3l6 6M21 3l-6 6M3 21l6-6M21 21l-6-6"/></svg></button></header>
-          <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div><p class="finding" id="heat-finding"></p>
-          <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap" aria-describedby="heat-reading-note">Click to show values</button>
-          <div class="chart-scroll"><div id="heatmap" class="chart"></div></div>
+          <div id="heat-guide" class="chart-guide" hidden><p>Each cell compares hourly speed with the segment’s own all-day baseline.</p><p>The baseline uses all available months and hours for the selected weekday or all weekdays for All days. Both speeds use trip-weighted miles divided by trip-weighted minutes. Percentage difference = 100 × (hourly speed ÷ baseline speed − 1).</p></div>
+<div class="hour-panel">
+  
+  <div class="hour-controls" role="group" aria-label="Select hour range">
+    <label>From <select id="hour-start" aria-label="First hour to include"></select></label>
+    <label>To <select id="hour-end" aria-label="End time, exclusive"></select></label>
+    <button id="heat-hour-chip" class="hour-chip" type="button" hidden></button>
+    <button id="clear-hours" type="button" title="Reset hour selection only">Reset</button>
+  </div>
+  
+</div>
+          <button type="button" class="heat-values-control" id="heat-show-values" aria-pressed="false" aria-controls="heatmap">Show values</button>
+          <p class="heat-drag-tip"><strong>Tip:</strong> Drag across the heatmap to select hours.</p><div class="heat-scroll-controls" aria-label="Heatmap navigation" hidden><button id="heat-scroll-left" type="button" aria-label="Scroll to earlier hours">←</button><button id="heat-scroll-right" type="button" aria-label="Scroll to later hours">→</button></div><div class="chart-scroll" id="heat-scroll-region" tabindex="0" aria-label="Hourly heatmap; scroll horizontally to see more hours"><div id="heatmap" class="chart"></div></div>
           <div class="heat-legend">
             <div class="heat-scale">
               <div class="ramp" aria-hidden="true"></div>
@@ -80,16 +90,7 @@
             </div>
             <span class="gap-key"><i class="gap-sample" aria-hidden="true"></i> No observations</span>
           </div>
-          <p class="chart-note" id="heat-reading-note">Orange: slower. Blue: faster. Neutral: usual speed. Hatching: no observations 
-          <div class="hour-panel">
-            <p class="chart-note">Drag across hours to filter the bars and monthly lines, or use the controls below.</p>
-            <div class="hour-controls" role="group" aria-label="Select hour range">
-              <label>From <select id="hour-start" aria-label="First hour to include"></select></label>
-              <label>Through <select id="hour-end" aria-label="Last hour to include"></select></label>
-              <button id="apply-hours" type="button">Apply hours</button>
-              <button id="clear-hours" type="button">All hours</button>
-            </div>
-          </div>
+          
         </section>
 
         <section class="panel month-panel" aria-labelledby="month-title">
@@ -109,26 +110,27 @@
             <select id="segment-picker" aria-label="Select segment" style="max-width: 100%; width: 100%;" aria-describedby="month-coverage"></select>
           </div>
                     <div class="monthly-selection-bar"><button id="monthly-selection-chip" class="monthly-selection-chip" type="button" hidden></button></div><div class="chart-scroll"><div id="monthly" class="chart"></div></div>
-          <div class="coverage-panel"><button id="month-info" class="coverage-read-more" type="button" aria-expanded="false" aria-controls="month-help">Why are some lines broken?</button>          <div id="month-help" class="month-help" hidden>
-            <strong>Why are some lines broken?</strong>
-            <p>Each point represents a month with observations for that segment. Lines connect consecutive observed months only.</p>
-            <p>A gap means the dataset has no observations for that month, or the selected weekday and hours leave no matching observations. It does not necessarily mean the bus stopped operating. Missing months are not zero speed.</p>
-            <p>Selecting a month filters the other charts; this chart keeps all twelve months for comparison.</p>
-          </div>
-
-            <p id="month-coverage" role="status" aria-live="polite" aria-atomic="true"></p>
-            <div id="coverage-details" hidden>
-              <p id="coverage-segment"></p>
-              <ul id="month-availability" class="month-availability" aria-label="Selected segment monthly availability"></ul>
+          <div class="coverage-panel">
+            <details class="coverage-breakdown">
+              <summary>Monthly data availability <svg class="disclosure-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 9 7 7 7-7"/></svg></summary>
+              <div class="coverage-content">
+                <p id="month-coverage" role="status" aria-live="polite" aria-atomic="true"></p>
+                <div id="coverage-details" hidden><ul id="month-availability" class="month-availability" aria-label="Selected segment monthly availability"></ul>
               <ul class="availability-legend" aria-label="Availability legend">
                 <li><span class="availability-mark observed" aria-hidden="true"></span> Observed</li>
                 <li><span class="availability-mark absent" aria-hidden="true"></span> No data</li>
                 <li><span class="availability-mark filtered" aria-hidden="true"></span> No filter matches</li>
               </ul>
-              <p id="coverage-source"></p>
-              <p id="coverage-filters" hidden></p>
-              <p class="coverage-caution">Missing observations do not necessarily mean the bus did not operate.</p>
-            </div>
+
+              <p class="coverage-caution">Missing observations do not necessarily mean the bus did not operate.</p></div>
+              </div>
+            </details>
+            <button id="month-info" class="coverage-read-more" type="button" aria-expanded="false" aria-controls="month-help">Why do some monthly lines appear incomplete? <svg class="disclosure-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 9 7 7 7-7"/></svg></button>          <div id="month-help" class="month-help" hidden>
+            <strong>Why do some monthly lines appear incomplete?</strong>
+            <p>Each point represents a month with observations for that segment. Lines connect consecutive observed months only.</p>
+            <p>A gap means the dataset has no observations for that month, or the selected weekday and hours leave no matching observations. It does not necessarily mean the bus stopped operating. Missing months are not zero speed.</p>
+            <p>Selecting a month filters the other charts; this chart keeps all twelve months for comparison.</p>
+          </div>
           </div>
           <p class="chart-note month-note">Select a month to filter the bars and heatmap. Select a line to highlight its segment.</p>
           
@@ -167,6 +169,7 @@
     </div>
   </dialog>
   <script type="module" src="introduction.js"></script>
+<script type="module" src="heatmap-controls.js"></script>
 </body>
 </html>
 

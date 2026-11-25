@@ -49,9 +49,10 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
   }
 
   function bars(host, view, state) {
-    const width = 1200, left = 405, right = 75, top = 22, rowHeight = 46;
+    const width = 1200, left = 405, right = 100, top = 30, rowHeight = 46;
     const height = top + view.length * rowHeight + 40;
     const svg = chart(host, width, height, 'Segment average road speeds in source stop-position order');
+    label(svg, 'segment-column', 2, 12, 'Segment').attr('font-size', 10);
     const maximum = Math.max(12, Math.ceil(d3.max(view, d => d.bar.speed) / 2) * 2 || 12);
     const x = d3.scaleLinear().domain([0, maximum]).range([left, width - right]);
     const y = d3.scaleBand().domain(view.map(d => d.id)).range([top, top + view.length * rowHeight]);
@@ -102,7 +103,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
       .attr('stroke', '#fffefa').attr('stroke-width', 1);
     rows.select('.speed-value').attr('x', d => x(d.bar.speed || 0) + 16).attr('y', 17)
       .attr('font-size', 12).attr('font-weight', 600).attr('fill', palette.ink)
-      .text(d => d.bar.speed === null ? 'No observations' : fmt(d.bar.speed));
+      .text(d => d.bar.speed === null ? 'No observations' : fmt(d.bar.speed) + ' mph');
     interactive(rows, d => `Select ${segmentName(d)}`, d => onSegment(d.id), d =>
       `${segmentName(d)}\n${fmt(d.bar.speed)} mph · ${count(d.bar.trips)} observed trips\n${d.distance.toFixed(3)} miles (full-year mean; range ${(d.distanceMin ?? d.distance).toFixed(3)}–${(d.distanceMax ?? d.distance).toFixed(3)}) · ${count(d.bar.records)} source records`);
     return maxTrips;
@@ -111,7 +112,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
   function heatmap(host, view, state) {
     const toggle = document.getElementById('heat-show-values');
     const showValues = toggle?.getAttribute('aria-pressed') === 'true';
-    d3.select(toggle).text(showValues ? 'Click to hide values' : 'Click to show values')
+    d3.select(toggle).text(showValues ? 'Hide values' : 'Show values')
       .on('click.heatValues', () => {
         toggle.setAttribute('aria-pressed', String(!showValues));
         heatmap(host, view, state);
@@ -119,11 +120,27 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     const expanded = Boolean(document.getElementById('heatmap-dialog')?.open);
     d3.select(host).classed('show-heat-values', showValues)
       .on('heatmap-layout', () => heatmap(host, view, state));
-    const width = showValues || expanded ? 1440 : 640, left = 38, top = 15, right = 7, rowHeight = 34;
+    const width = showValues || expanded ? 1440 : 640, left = 48, top = 30, right = 7, rowHeight = 34;
     const bottom = top + view.length * rowHeight;
     const svg = chart(host, width, bottom + 52, '24 hourly columns for each segment; drag to select hours');
     const x = d3.scaleBand().domain(d3.range(24)).range([left, width - right]).paddingInner(0.08);
     const y = d3.scaleBand().domain(view.map(d => d.id)).range([top, bottom]).paddingInner(0.09);
+    const hover = svg.selectAll('g.cell-hover').data([null]).join('g')
+      .attr('class', 'cell-hover').attr('pointer-events', 'none')
+      .attr('aria-hidden', 'true').attr('display', 'none');
+    hover.selectAll('rect').data([
+      {stroke: '#ffffff', width: 4},
+      {stroke: '#192c32', width: 1.5}
+    ]).join('rect').attr('fill', 'none').attr('rx', 2)
+      .attr('stroke', d => d.stroke).attr('stroke-width', d => d.width)
+      .attr('vector-effect', 'non-scaling-stroke');
+    function clearCellHover() { hover.attr('display', 'none'); }
+    function showCellHover(segment, h) {
+      hover.attr('display', null).raise();
+      hover.selectAll('rect').attr('x', x(h) + 1).attr('y', y(segment.id) + 1)
+        .attr('width', Math.max(0, x.bandwidth() - 2))
+        .attr('height', Math.max(0, y.bandwidth() - 2));
+    }
     const defs = svg.selectAll('defs.heat-defs').data([null]).join('defs').attr('class', 'heat-defs');
     const pattern = defs.selectAll('pattern').data([null]).join('pattern')
       .attr('id', 'heat-no-observations').attr('patternUnits', 'userSpaceOnUse')
@@ -133,6 +150,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     pattern.selectAll('path').data([null]).join('path')
       .attr('d', 'M-1,1 L1,-1 M0,6 L6,0 M5,7 L7,5')
       .attr('stroke', '#8a999d').attr('stroke-width', 0.8);
+    label(svg, 'segment-column', 2, 15, 'Segment').attr('font-size', 9);
     const lightness = heatColor;
     const rows = svg.selectAll('g.heat-row').data(view, d => d.id).join('g').attr('class', 'heat-row')
       .attr('data-segment', d => d.id).attr('aria-pressed', d => String(d.id === state.selected))
@@ -164,9 +182,14 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
         .text(d=>d.delta === 0 ? '0%' : Math.abs(d.delta) < 1
           ? (d.delta < 0 ? '−<1%' : '+<1%')
           : (d.delta < 0 ? '−' : '+') + Math.round(Math.abs(d.delta)) + '%');
-      // Keyboard users can select a single hour from a cell; controls support ranges.
-      interactive(cells, d => `${segmentName(segment)}, ${hour(d.h)}: ${d.speed === null ? 'no observations' : fmt(d.speed) + ' mph, ' + fmt(d.delta) + '% versus baseline'}`,
-        d => onHours([d.h, d.h]), d => cellTooltip(d, state));
+      // Cells expose details on focus but do not activate hour filters.
+      cells.attr('tabindex', 0).attr('role', 'img').classed('interactive', false)
+        .attr('aria-label', d => cellTooltip(d, state))
+        .on('click.select', null).on('keydown.select', null)
+        .on('focus.tooltip', (event, d) => tooltip(event, cellTooltip(d, state)))
+        .on('blur.tooltip', hideTooltip);
+      cells.on('focus.cellHover', (event, d) => showCellHover(segment, d.h))
+        .on('blur.cellHover', clearCellHover);
       row.selectAll('rect.selection-outline').data(segment.id === state.selected ? [segment] : []).join('rect')
         .attr('class', 'selection-outline').attr('x', left - 3).attr('y', y(segment.id) - 2)
         .attr('width', width - left - right + 5).attr('height', y.bandwidth() + 4)
@@ -174,7 +197,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     });
     svg.selectAll('g.hour-axis').data([null]).join('g').attr('class', 'hour-axis')
       .attr('transform', `translate(0,${bottom + 2})`)
-      .call(d3.axisBottom(x).tickValues([0, 6, 12, 18, 23]).tickSize(0).tickPadding(10))
+      .call(d3.axisBottom(x).tickValues(d3.range(24)).tickSize(0).tickPadding(10))
       .call(g => g.select('.domain').remove()).call(g => g.selectAll('text').attr('fill', palette.muted));
     label(svg, 'hour-label', left + (width - right - left) / 2, bottom + 45,
       'Hour of day · 24 columns, one per hour', 'middle').attr('font-size', 11);
@@ -182,11 +205,25 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     // D3 owns the brush gesture and pixel selection. Programmatic restoration
     // must not dispatch another shared-state update (and recurse into render).
     const boundary = d3.scaleLinear().domain([0, 24]).range([left, width - right]);
+    let gestureStartX = null;
     const brush = d3.brushX().extent([[left - 1, top - 3], [width - right + 1, bottom + 1]])
-      .on('start', hideTooltip)
+      .on('start', event => {
+        clearCellHover(); hideTooltip();
+        if (!restoringBrush && event.sourceEvent) {
+          gestureStartX = d3.pointer(event.sourceEvent, svg.node())[0];
+        }
+      })
       .on('end', event => {
         if (restoringBrush || !event.sourceEvent) return;
-        if (!event.selection) { onHours(null); return; }
+        const endX = d3.pointer(event.sourceEvent, svg.node())[0];
+        if (!event.selection || gestureStartX === null || Math.abs(endX - gestureStartX) < 3) {
+          restoringBrush = true;
+          brushLayer.call(brush.move, state.hours ? [boundary(state.hours[0]), boundary(state.hours[1] + 1)] : null);
+          restoringBrush = false;
+          gestureStartX = null;
+          return;
+        }
+        gestureStartX = null;
         const [a, b] = event.selection;
         const start = Math.max(0, Math.min(23, Math.floor(boundary.invert(a) + 1e-6)));
         const end = Math.max(start, Math.min(23, Math.ceil(boundary.invert(b) - 1e-6) - 1));
@@ -196,12 +233,16 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
     brushLayer.select('.selection').attr('fill', palette.accent).attr('fill-opacity', 0)
       .attr('stroke', palette.accent).attr('stroke-width', 1.5);
     brushLayer.on('pointermove.tooltip', event => {
-      if (event.buttons) { hideTooltip(); return; }
+      if (event.buttons) { clearCellHover(); hideTooltip(); return; }
       const [px, py] = d3.pointer(event, svg.node());
-      const h = Math.max(0, Math.min(23, Math.floor(boundary.invert(px))));
-      const segment = view[Math.floor((py - top) / rowHeight)];
-      if (segment) tooltip(event, cellTooltip({...segment.hourly[h], h, segment}, state));
-    }).on('pointerleave.tooltip', hideTooltip);
+      const h = Math.floor((px - left) / x.step());
+      const segment = view.find(d => py >= y(d.id) && py <= y(d.id) + y.bandwidth());
+      if (!segment || h < 0 || h > 23 || px < x(h) || px > x(h) + x.bandwidth()) {
+        clearCellHover(); hideTooltip(); return;
+      }
+      showCellHover(segment, h);
+      tooltip(event, cellTooltip({...segment.hourly[h], h, segment}, state));
+    }).on('pointerleave.tooltip', () => { clearCellHover(); hideTooltip(); });
     restoringBrush = true;
     brushLayer.call(brush.move, state.hours ? [boundary(state.hours[0]), boundary(state.hours[1] + 1)] : null);
     restoringBrush = false;
@@ -209,7 +250,14 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
   }
 
   function cellTooltip(d, state) {
-    return `${segmentName(d.segment)}\n${hour(d.h)}–${hour(d.h + 1)} · ${state.month ? MONTHS[state.month - 1] : 'All months'}\n${d.speed === null ? 'No observations' : `${fmt(d.speed)} mph · ${d.delta >= 0 ? '+' : ''}${fmt(d.delta)}% vs usual\n${count(d.trips)} observed trips`}\nUsual all-day speed: ${fmt(d.segment.baseline.speed)} mph`;
+    const baseline = d.segment.baseline.speed;
+    const comparison = d.delta === null ? 'Comparison unavailable'
+      : d.delta === 0 ? 'Same as usual'
+      : `${fmt(Math.abs(d.delta))}% ${d.delta < 0 ? 'slower' : 'faster'} than usual`;
+    return `${segmentName(d.segment)}
+${hour(d.h)}–${hour(d.h + 1)} · ${state.month ? MONTHS[state.month - 1] : 'All months'}
+Usual all-day speed: ${baseline === null ? 'Unavailable' : fmt(baseline) + ' mph'}
+${d.speed === null ? 'Hourly speed: No observations' : 'Hourly vs usual: ' + fmt(d.speed) + ' mph vs ' + fmt(baseline) + ' mph' + '\n' + comparison + '\n' + count(d.trips) + ' observed trips'}`;
   }
 
   function monthly(host, view, state) {
@@ -258,7 +306,7 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
         .attr('opacity', state.selected != null && !selected ? 0.4 : 1)
         .on('pointermove.tooltip', (event, value) => {
           event.stopPropagation();
-          tooltip(event, `${segmentName(segment)}\n${MONTHS[value.m]} · ${fmt(value.speed)} mph\n${count(value.trips)} observed trips`);
+          tooltip(event, `${segmentName(segment)}\n${MONTHS[value.m]} · ${fmt(value.speed)} mph`);
         }).on('pointerleave.tooltip', hideTooltip);
     });
     interactive(series, d => `Select ${segmentName(d)}`, d => onSegment(d.id), segmentName);
@@ -267,7 +315,9 @@ export function createCharts(d3, {onSegment, onHours, onMonth, tooltip, hideTool
       .join('g').attr('class', 'month-choice').attr('aria-pressed', d => String(state.month === d.m + 1));
     months.selectAll('rect').data(d => [d]).join('rect').attr('x', d => x(d.m) - 19).attr('y', bottom + 9)
       .attr('width', 38).attr('height', 29).attr('rx', 4)
-      .attr('fill', d => state.month === d.m + 1 ? palette.ink : 'transparent');
+      .attr('fill', d => state.month === d.m + 1 ? palette.ink : '#f1f4f6')
+      .attr('stroke', d => state.month === d.m + 1 ? palette.ink : '#9aadb5')
+      .attr('stroke-width', 1).attr('cursor', 'pointer');
     months.selectAll('text').data(d => [d]).join('text').attr('x', d => x(d.m)).attr('y', bottom + 28)
       .attr('text-anchor', 'middle').attr('font-size', 10)
       .attr('fill', d => state.month === d.m + 1 ? 'white' : palette.muted).text(d => d.name);
